@@ -1,2 +1,9 @@
 build/
 .DS_Store
+
+# 敏感配置文件
+*.env
+*.env.*
+secrets.json
+config.local.json
+**/UserDefaults.plist
