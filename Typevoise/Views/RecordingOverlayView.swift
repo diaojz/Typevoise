@@ -183,12 +183,22 @@ private struct AudioWaveformView: View {
         let minHeight = maxHeight * minHeightRatio
         let maxBarHeight = maxHeight * maxHeightRatio
 
-        let frequency = 1.8 + Double(index) * 0.15
-        let phase = time * frequency + Double(index) * 0.5
+        // 增加频率差异，让每根柱子的波动更独立
+        let frequency = 2.2 + Double(index) * 0.35
+        let phase = time * frequency + Double(index) * 0.8
         let wave = (sin(phase) + 1) / 2
 
-        let idleHeight = minHeight + wave * (minHeight * 0.6)
-        let activeHeight = minHeight + normalizedLevel * (maxBarHeight - minHeight) * (0.7 + wave * 0.3)
+        // 添加第二层波形，增加复杂度
+        let secondWave = (sin(time * 1.5 + Double(index) * 0.3) + 1) / 2
+        let combinedWave = (wave * 0.7 + secondWave * 0.3)
+
+        // 中间柱子更高，两侧递减
+        let centerIndex = Double(barCount) / 2
+        let distanceFromCenter = abs(Double(index) - centerIndex)
+        let centerBoost = 1.0 - (distanceFromCenter / centerIndex) * 0.4
+
+        let idleHeight = minHeight + combinedWave * (minHeight * 1.2) * centerBoost
+        let activeHeight = minHeight + normalizedLevel * (maxBarHeight - minHeight) * (0.6 + combinedWave * 0.4) * centerBoost
 
         return normalizedLevel < 0.05 ? idleHeight : activeHeight
     }
