@@ -19,7 +19,7 @@ struct RecordingOverlayView: View {
     let onConfirm: () -> Void
 
     var body: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: 10) {
             // 根据状态显示不同的内容
             switch state.state {
             case .recording:
@@ -31,14 +31,18 @@ struct RecordingOverlayView: View {
             }
 
             // 底部文本
-            Text(bottomText)
-                .font(.system(size: 11))
-                .foregroundColor(.white.opacity(0.92))
-                .lineLimit(1)
-                .frame(maxWidth: 220)
+            if !bottomText.isEmpty {
+                Text(bottomText)
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundColor(.white.opacity(0.92))
+                    .lineLimit(2)
+                    .multilineTextAlignment(.center)
+                    .frame(maxWidth: .infinity)
+            }
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 10)
+        .padding(.horizontal, 24)
+        .padding(.vertical, 14)
+        .frame(minWidth: 300, maxWidth: .infinity)
         .background(Color.black.opacity(0.88))
         .clipShape(Capsule())
         .overlay(
@@ -48,25 +52,32 @@ struct RecordingOverlayView: View {
 
     // 录音状态视图
     private var recordingView: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 0) {
+            // 左侧取消按钮
             Button(action: onCancel) {
                 Image(systemName: "xmark")
-                    .font(.system(size: 14, weight: .bold))
+                    .font(.system(size: 16, weight: .bold))
                     .foregroundColor(.white)
-                    .frame(width: 34, height: 34)
+                    .frame(width: 40, height: 40)
                     .background(Color.gray.opacity(0.45))
                     .clipShape(Circle())
             }
             .buttonStyle(.plain)
 
-            AudioWaveformView(level: state.level, isActive: true)
-                .frame(width: 86, height: 24)
+            Spacer()
 
+            // 中间波形
+            AudioWaveformView(level: state.level, isActive: true)
+                .frame(width: 120, height: 32)
+
+            Spacer()
+
+            // 右侧确认按钮
             Button(action: onConfirm) {
                 Image(systemName: "checkmark")
-                    .font(.system(size: 14, weight: .bold))
+                    .font(.system(size: 16, weight: .bold))
                     .foregroundColor(.black)
-                    .frame(width: 34, height: 34)
+                    .frame(width: 40, height: 40)
                     .background(Color.white)
                     .clipShape(Circle())
             }
@@ -76,37 +87,42 @@ struct RecordingOverlayView: View {
 
     // 处理中状态视图
     private var processingView: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 10) {
             ProgressView()
                 .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                .scaleEffect(0.8)
+                .scaleEffect(1.0)
+                .frame(width: 18, height: 18)
 
             Text("Thinking...")
-                .font(.system(size: 14, weight: .medium))
+                .font(.system(size: 16, weight: .medium))
                 .foregroundColor(.white)
+
+            // 占位，保证文本严格居中（与左侧 loading 等宽）
+            Color.clear
+                .frame(width: 18, height: 18)
         }
-        .frame(height: 34)
+        .frame(height: 40)
     }
 
     // 完成状态视图
     private var completedView: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: 10) {
             Image(systemName: "checkmark.circle.fill")
-                .font(.system(size: 18))
+                .font(.system(size: 22))
                 .foregroundColor(.green)
 
             Text("完成")
-                .font(.system(size: 14, weight: .medium))
+                .font(.system(size: 16, weight: .medium))
                 .foregroundColor(.white)
         }
-        .frame(height: 34)
+        .frame(height: 40)
     }
 
     // 底部文本
     private var bottomText: String {
         switch state.state {
         case .recording:
-            return state.transcript.isEmpty ? "正在聆听..." : state.transcript
+            return state.transcript.isEmpty ? "" : state.transcript
         case .processing:
             return "正在润色文本..."
         case .completed:
@@ -119,16 +135,61 @@ private struct AudioWaveformView: View {
     let level: CGFloat
     let isActive: Bool
 
+    private let barCount = 12
+    private let barWidth: CGFloat = 2.5
+    private let barSpacing: CGFloat = 3.5
+    private let minHeightRatio: CGFloat = 0.15
+    private let maxHeightRatio: CGFloat = 0.85
+    private let gamma: CGFloat = 0.7
+
     var body: some View {
-        HStack(spacing: 3) {
-            ForEach(0..<9, id: \.self) { idx in
-                let base: CGFloat = 4
-                let dynamic = max(0, level * 18 - abs(CGFloat(idx - 4)) * 1.2)
-                RoundedRectangle(cornerRadius: 2)
-                    .fill(Color.white)
-                    .frame(width: 3, height: isActive ? base + dynamic : 4)
-                    .animation(.easeOut(duration: 0.12), value: level)
+        TimelineView(.animation(minimumInterval: 1.0 / 30.0, paused: !isActive)) { timeline in
+            Canvas { context, size in
+                let centerY = size.height / 2
+                let time = timeline.date.timeIntervalSinceReferenceDate
+                let totalWidth = CGFloat(barCount) * (barWidth + barSpacing) - barSpacing
+                let startX = (size.width - totalWidth) / 2
+
+                for i in 0..<barCount {
+                    let x = startX + CGFloat(i) * (barWidth + barSpacing)
+                    let barHeight = calculateBarHeight(
+                        index: i,
+                        time: time,
+                        maxHeight: size.height
+                    )
+
+                    let rect = CGRect(
+                        x: x,
+                        y: centerY - barHeight / 2,
+                        width: barWidth,
+                        height: barHeight
+                    )
+
+                    let opacity = 0.85 - (abs(CGFloat(i) - CGFloat(barCount) / 2) / CGFloat(barCount)) * 0.3
+                    context.fill(
+                        Path(roundedRect: rect, cornerRadius: barWidth / 2),
+                        with: .color(.white.opacity(opacity))
+                    )
+                }
             }
         }
+        .drawingGroup()
+    }
+
+    private func calculateBarHeight(index: Int, time: TimeInterval, maxHeight: CGFloat) -> CGFloat {
+        let clampedLevel = min(max(level, 0), 1)
+        let normalizedLevel = pow(clampedLevel, gamma)
+
+        let minHeight = maxHeight * minHeightRatio
+        let maxBarHeight = maxHeight * maxHeightRatio
+
+        let frequency = 1.8 + Double(index) * 0.15
+        let phase = time * frequency + Double(index) * 0.5
+        let wave = (sin(phase) + 1) / 2
+
+        let idleHeight = minHeight + wave * (minHeight * 0.6)
+        let activeHeight = minHeight + normalizedLevel * (maxBarHeight - minHeight) * (0.7 + wave * 0.3)
+
+        return normalizedLevel < 0.05 ? idleHeight : activeHeight
     }
 }
