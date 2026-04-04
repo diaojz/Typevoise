@@ -193,36 +193,42 @@ class VoiceController {
 
         Task {
             do {
-                // 添加延迟以便观察 processing 状态
-                try await Task.sleep(nanoseconds: 2_000_000_000) // 2秒延迟
-
                 let polishedText = try await ClaudeService.shared.polishText(recognizedText)
                 print("✨ 润色结果: \(polishedText)")
 
                 await MainActor.run {
-                    TextInserter.shared.insertText(polishedText)
+                    RecordingOverlayController.shared.hide()
+                    TextInserter.shared.insertText(
+                        polishedText,
+                        targetBundleID: self.pendingInsertTargetBundleID,
+                        targetPID: self.pendingInsertTargetPID
+                    )
                     // 保存到历史记录
                     HistoryManager.shared.addRecord(originalText: recognizedText, polishedText: polishedText)
+                    self.pendingInsertTargetBundleID = nil
+                    self.pendingInsertTargetPID = nil
                     self.isProcessing = false
                     NotificationCenter.default.post(name: .voiceProcessingCompleted, object: nil)
                     print("✅ [VoiceController] 文本已插入")
-
-                    // 显示完成状态，1秒后自动隐藏
-                    RecordingOverlayController.shared.showCompleted(autoHideAfter: 1.0)
                 }
             } catch {
                 await MainActor.run {
+                    RecordingOverlayController.shared.hide()
                     // Claude 调用失败时，降级插入原始识别文本，避免用户内容丢失
-                    TextInserter.shared.insertText(recognizedText)
+                    TextInserter.shared.insertText(
+                        recognizedText,
+                        targetBundleID: self.pendingInsertTargetBundleID,
+                        targetPID: self.pendingInsertTargetPID
+                    )
                     // 即使失败也保存到历史记录（原文和润色文本相同）
                     HistoryManager.shared.addRecord(originalText: recognizedText, polishedText: recognizedText)
+                    self.pendingInsertTargetBundleID = nil
+                    self.pendingInsertTargetPID = nil
                     self.isProcessing = false
                     NotificationCenter.default.post(name: .voiceProcessingCompleted, object: nil)
                     print("❌ [VoiceController] Claude 处理失败: \(error.localizedDescription)")
                     print("↩️ [VoiceController] 已降级插入原始文本")
 
-                    // 隐藏浮窗并显示错误
-                    RecordingOverlayController.shared.hide()
                     self.showError("Claude 润色失败，已为你插入原始识别文本。\n\n错误：\(error.localizedDescription)")
                 }
             }
