@@ -61,7 +61,7 @@ Typevoise/
 使用提供的脚本:
 
 ```bash
-./build_and_install.sh
+./deploy.sh
 ```
 
 ### 手动构建命令
@@ -114,7 +114,7 @@ rm -rf build/
 
 **解决方案**:
 1. 不要直接从 Xcode 运行
-2. 使用 `build_and_install.sh` 构建并安装 Release 版本
+2. 使用 `./deploy.sh` 构建并安装 Release 版本
 3. 从 `/Applications` 启动应用
 4. 此时应该会出现在辅助功能列表中
 
@@ -174,6 +174,6 @@ rm -rf build/
 ## 相关文档
 
 - [README.md](README.md): 用户使用文档
-- [build_and_install.sh](build_and_install.sh): 自动化构建脚本
+- [deploy.sh](deploy.sh): 自动化构建脚本
 - [Apple Speech Framework](https://developer.apple.com/documentation/speech)
 - [CGEvent Reference](https://developer.apple.com/documentation/coregraphics/cgevent)

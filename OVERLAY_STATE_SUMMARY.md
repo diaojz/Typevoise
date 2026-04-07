@@ -128,7 +128,7 @@ self.onConfirm = nil
 
 ```bash
 # 构建并安装
-./build_and_install.sh
+./deploy.sh
 
 # 或手动构建
 xcodebuild -project Typevoise.xcodeproj \

@@ -119,7 +119,7 @@ class VoiceController {
                     if let error = error {
                         // 出错时隐藏浮窗
                         RecordingOverlayController.shared.hide()
-                        self.showError("语音识别失败：\(error.localizedDescription)")
+                        self.showError(self.userFacingRecognitionMessage(for: error))
                         NotificationCenter.default.post(name: .voiceRecordingStopped, object: nil)
                         return
                     }
@@ -135,7 +135,13 @@ class VoiceController {
                 NotificationCenter.default.post(name: .voiceRecordingStarted, object: nil)
                 print("🎤 开始录音")
             } catch {
-                self.showError("录音失败: \(error.localizedDescription)")
+                NotificationCenter.default.post(name: .voiceRecordingStopped, object: nil)
+                NotificationCenter.default.post(
+                    name: NSNotification.Name("RecordingStateChanged"),
+                    object: nil,
+                    userInfo: ["isRecording": false]
+                )
+                self.showError("录音失败: \(self.userFacingRecognitionMessage(for: error))")
             }
         }
     }
@@ -233,6 +239,16 @@ class VoiceController {
                 }
             }
         }
+    }
+
+    private func userFacingRecognitionMessage(for error: Error) -> String {
+        if let localizedError = error as? LocalizedError,
+           let message = localizedError.errorDescription,
+           !message.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return message
+        }
+
+        return "语音识别这次没有成功完成，请再试一次。若多次失败，请检查麦克风和语音识别权限是否已开启。"
     }
 
     private func showMicrophonePermissionAlert() {

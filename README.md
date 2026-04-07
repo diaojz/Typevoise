@@ -28,7 +28,7 @@
 ### 方式 1: 使用脚本(推荐)
 
 ```bash
-./build_and_install.sh
+./deploy.sh
 ```
 
 这个脚本会:
@@ -134,7 +134,7 @@ Typevoise/
 
 ### App 不出现在辅助功能列表中
 
-确保你安装的是 Release 版本到 `/Applications` 目录,而不是直接从 Xcode 运行。使用 `build_and_install.sh` 脚本可以解决这个问题。
+确保你安装的是 Release 版本到 `/Applications` 目录,而不是直接从 Xcode 运行。使用 `./deploy.sh` 脚本可以解决这个问题。
 
 ### 快捷键不工作
 

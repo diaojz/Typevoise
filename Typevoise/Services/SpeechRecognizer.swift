@@ -156,7 +156,7 @@ class SpeechRecognizer: ObservableObject {
                 inputNode.removeTap(onBus: 0)
                 hasInstalledTap = false
             }
-            throw RecognitionError.microphoneAccessDenied
+            throw RecognitionError.audioEngineStartFailed(underlyingMessage: error.localizedDescription)
         }
 
         // 开始识别
@@ -269,25 +269,31 @@ class SpeechRecognizer: ObservableObject {
 
     // MARK: - 错误类型
 
-    enum RecognitionError: Error {
+    enum RecognitionError: LocalizedError {
         case notAuthorized
         case cannotCreateRequest
         case recognizerUnavailable
         case noSpeechDetected
         case microphoneAccessDenied
+        case audioEngineStartFailed(underlyingMessage: String)
 
-        var localizedDescription: String {
+        var errorDescription: String? {
             switch self {
             case .notAuthorized:
-                return "未授权语音识别权限"
+                return "未获得语音识别权限，请在系统设置中允许 Typevoise 使用语音识别。"
             case .cannotCreateRequest:
-                return "无法创建识别请求"
+                return "语音识别暂时无法启动，请关闭后重试。"
             case .recognizerUnavailable:
-                return "当前语言的语音识别器不可用"
+                return "当前语音识别服务暂时不可用，请稍后再试。"
             case .noSpeechDetected:
-                return "未检测到语音，请靠近麦克风并连续说 1-2 秒"
+                return "没有听清你刚才说的话，请靠近麦克风并连续说 1-2 秒后再试。"
             case .microphoneAccessDenied:
-                return "麦克风访问被拒绝，请在系统设置中授予权限"
+                return "未获得麦克风权限，请在系统设置中允许 Typevoise 访问麦克风。"
+            case .audioEngineStartFailed(let underlyingMessage):
+                if underlyingMessage.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    return "录音启动失败，请检查麦克风权限、输入设备状态后再试一次。"
+                }
+                return "录音启动失败，请检查麦克风权限、输入设备状态后再试一次。\n\n系统信息：\(underlyingMessage)"
             }
         }
     }
