@@ -260,7 +260,7 @@
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_LSUIElement = YES;
+				INFOPLIST_KEY_LSUIElement = NO;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Typevoise 需要访问麦克风以进行语音识别";
 				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "Typevoise 需要使用语音识别功能将您的语音转换为文字";
@@ -296,7 +296,7 @@
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_LSUIElement = YES;
+				INFOPLIST_KEY_LSUIElement = NO;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Typevoise 需要访问麦克风以进行语音识别";
 				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "Typevoise 需要使用语音识别功能将您的语音转换为文字";

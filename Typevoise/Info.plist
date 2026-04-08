@@ -7,6 +7,6 @@
 	<key>NSSpeechRecognitionUsageDescription</key>
 	<string>Typevoise 需要使用语音识别功能将您的语音转换为文字</string>
 	<key>LSUIElement</key>
-	<true/>
+	<false/>
 </dict>
 </plist>

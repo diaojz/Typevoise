@@ -28,6 +28,14 @@ class StatusBarController {
         menu?.addItem(NSMenuItem(title: "Typevoise", action: nil, keyEquivalent: ""))
         menu?.addItem(NSMenuItem.separator())
 
+        let openItem = NSMenuItem(title: "打开主窗口", action: #selector(openOverview), keyEquivalent: "")
+        openItem.target = self
+        menu?.addItem(openItem)
+
+        let historyItem = NSMenuItem(title: "历史记录", action: #selector(openHistory), keyEquivalent: "")
+        historyItem.target = self
+        menu?.addItem(historyItem)
+
         let settingsItem = NSMenuItem(title: "设置...", action: #selector(openSettings), keyEquivalent: ",")
         settingsItem.target = self
         menu?.addItem(settingsItem)
@@ -52,9 +60,16 @@ class StatusBarController {
         // 点击状态栏图标时显示菜单
     }
 
+    @objc private func openOverview() {
+        ContentView.openWindow(for: .overview)
+    }
+
+    @objc private func openHistory() {
+        ContentView.openWindow(for: .history)
+    }
+
     @objc private func openSettings() {
-        NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
-        NSApp.activate(ignoringOtherApps: true)
+        ContentView.openWindow(for: .settings)
     }
 
     @objc private func quit() {
@@ -84,6 +99,7 @@ class StatusBarController {
         case .idle:
             button.image = NSImage(systemSymbolName: "waveform", accessibilityDescription: "待机")
             button.image?.isTemplate = true
+            button.contentTintColor = nil
         case .recording:
             button.image = NSImage(systemSymbolName: "waveform.circle.fill", accessibilityDescription: "录音中")
             button.image?.isTemplate = false
