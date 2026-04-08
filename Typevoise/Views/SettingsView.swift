@@ -7,6 +7,8 @@ struct SettingsView: View {
     @State private var hotkeyDescription = "未设置"
     @State private var autoPasteEnabled = true
     @State private var saveMessage = ""
+    @StateObject private var microphoneManager = MicrophoneManager.shared
+    @State private var showMicrophonePicker = false
 
     var body: some View {
         ScrollView {
@@ -69,6 +71,34 @@ struct SettingsView: View {
                     }
                 }
 
+                settingsCard(title: "麦克风设备", description: "选择用于语音识别的麦克风。如果识别不到声音，可能是距离太远或选错了设备。") {
+                    VStack(alignment: .leading, spacing: 16) {
+                        HStack {
+                            VStack(alignment: .leading, spacing: 6) {
+                                Text("当前麦克风")
+                                    .font(.headline)
+                                if let device = microphoneManager.getSelectedDevice() {
+                                    Text(device.displayName)
+                                        .foregroundStyle(.secondary)
+                                } else {
+                                    Text("系统默认")
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
+                            Spacer()
+                            Button("选择麦克风...") {
+                                showMicrophonePicker = true
+                            }
+                            .buttonStyle(.bordered)
+                        }
+
+                        Text("如果识别不到声音，请确保：\n• 麦克风距离嘴巴 10-30cm\n• 选择了正确的麦克风设备\n• 系统设置中已授予麦克风权限")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+
                 HStack(spacing: 14) {
                     Button("保存设置") {
                         save()
@@ -87,6 +117,9 @@ struct SettingsView: View {
         }
         .onAppear {
             load()
+        }
+        .sheet(isPresented: $showMicrophonePicker) {
+            MicrophonePickerView()
         }
     }
 

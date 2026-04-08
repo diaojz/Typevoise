@@ -2,6 +2,7 @@ import Foundation
 import Speech
 import AVFoundation
 import Combine
+import CoreAudio
 
 @MainActor
 class SpeechRecognizer: ObservableObject {
@@ -110,7 +111,32 @@ class SpeechRecognizer: ObservableObject {
         }
         print("✅ [SpeechRecognizer] 识别请求已创建")
 
-        // 配置音频引擎
+        // 配置音频引擎 - 设置选定的麦克风
+        if let selectedDeviceID = SettingsManager.shared.selectedMicrophoneID,
+           let deviceID = AudioDeviceID(selectedDeviceID) {
+            // 设置音频引擎使用指定的输入设备
+            var propertyAddress = AudioObjectPropertyAddress(
+                mSelector: kAudioHardwarePropertyDefaultInputDevice,
+                mScope: kAudioObjectPropertyScopeGlobal,
+                mElement: kAudioObjectPropertyElementMain
+            )
+            var deviceIDValue = deviceID
+            let propertySize = UInt32(MemoryLayout<AudioDeviceID>.size)
+            let status = AudioObjectSetPropertyData(
+                AudioObjectID(kAudioObjectSystemObject),
+                &propertyAddress,
+                0,
+                nil,
+                propertySize,
+                &deviceIDValue
+            )
+            if status == kAudioHardwareNoError {
+                print("🎤 [SpeechRecognizer] 已设置麦克风设备: \(selectedDeviceID)")
+            } else {
+                print("⚠️  [SpeechRecognizer] 设置麦克风失败 (status: \(status))，使用默认设备")
+            }
+        }
+
         let inputNode = audioEngine.inputNode
         let recordingFormat = inputNode.outputFormat(forBus: 0)
         print("📊 [SpeechRecognizer] 音频格式: \(recordingFormat)")

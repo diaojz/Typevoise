@@ -55,6 +55,7 @@ struct ContentView: View {
                             isRecording: isRecording,
                             hotkeyDescription: getHotkeyDescription(),
                             recentRecords: Array(historyManager.records.prefix(4)),
+                            totalRecordsCount: historyManager.records.count,
                             openHistory: { selectedSection = .history },
                             openSettings: { selectedSection = .settings }
                         )
@@ -279,6 +280,7 @@ private struct OverviewPageView: View {
     let isRecording: Bool
     let hotkeyDescription: String
     let recentRecords: [TranscriptionRecord]
+    let totalRecordsCount: Int
     let openHistory: () -> Void
     let openSettings: () -> Void
 
@@ -324,7 +326,7 @@ private struct OverviewPageView: View {
         HStack(spacing: 18) {
             overviewCard(title: "当前状态", value: isRecording ? "录音中" : "待机", symbol: isRecording ? "waveform.circle.fill" : "bolt.circle")
             overviewCard(title: "快捷键", value: hotkeyDescription, symbol: "keyboard")
-            overviewCard(title: "历史条数", value: "\(recentRecords.count)+", symbol: "text.badge.checkmark")
+            overviewCard(title: "历史条数", value: "\(totalRecordsCount)", symbol: "text.badge.checkmark")
         }
     }
 

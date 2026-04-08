@@ -57,6 +57,13 @@ class SettingsManager {
         set { UserDefaults.standard.set(newValue, forKey: "autoPasteEnabled") }
     }
 
+    // MARK: - 麦克风设备配置
+
+    var selectedMicrophoneID: String? {
+        get { UserDefaults.standard.string(forKey: "selectedMicrophoneID") }
+        set { UserDefaults.standard.set(newValue, forKey: "selectedMicrophoneID") }
+    }
+
     // MARK: - 首次启动标记
 
     var hasCompletedSetup: Bool {
