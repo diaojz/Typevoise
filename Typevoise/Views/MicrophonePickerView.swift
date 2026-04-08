@@ -110,17 +110,23 @@ struct MicrophonePickerView: View {
             if microphoneManager.availableDevices.isEmpty {
                 microphoneManager.refreshDevices()
             }
-            // 开始监听当前选中的麦克风
-            microphoneMonitor.startMonitoring(deviceID: selectedID)
+            // 延迟启动监听，避免与其他音频引擎冲突
+            Task {
+                try? await Task.sleep(nanoseconds: 200_000_000) // 0.2 秒
+                await microphoneMonitor.startMonitoring(deviceID: selectedID)
+            }
         }
         .onDisappear {
-            microphoneMonitor.stopMonitoring()
+            Task {
+                await microphoneMonitor.stopMonitoring()
+            }
         }
         .onChange(of: selectedID) { _, newID in
             // 切换麦克风时重新开始监听
-            microphoneMonitor.stopMonitoring()
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                microphoneMonitor.startMonitoring(deviceID: newID)
+            Task {
+                await microphoneMonitor.stopMonitoring()
+                try? await Task.sleep(nanoseconds: 300_000_000) // 0.3 秒
+                await microphoneMonitor.startMonitoring(deviceID: newID)
             }
         }
     }
