@@ -2,6 +2,7 @@ import SwiftUI
 
 struct MicrophonePickerView: View {
     @StateObject private var microphoneManager = MicrophoneManager.shared
+    @StateObject private var microphoneMonitor = MicrophoneMonitor()
     @Environment(\.dismiss) private var dismiss
     @State private var selectedID: String?
 
@@ -109,6 +110,18 @@ struct MicrophonePickerView: View {
             if microphoneManager.availableDevices.isEmpty {
                 microphoneManager.refreshDevices()
             }
+            // 开始监听当前选中的麦克风
+            microphoneMonitor.startMonitoring(deviceID: selectedID)
+        }
+        .onDisappear {
+            microphoneMonitor.stopMonitoring()
+        }
+        .onChange(of: selectedID) { _, newID in
+            // 切换麦克风时重新开始监听
+            microphoneMonitor.stopMonitoring()
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                microphoneMonitor.startMonitoring(deviceID: newID)
+            }
         }
     }
 
@@ -160,16 +173,8 @@ struct MicrophonePickerView: View {
 
                 Spacer()
 
-                // 音量指示器（占位）
-                if isSelected {
-                    HStack(spacing: 2) {
-                        ForEach(0..<8) { _ in
-                            RoundedRectangle(cornerRadius: 1)
-                                .fill(Color.accentColor.opacity(0.3))
-                                .frame(width: 3, height: 12)
-                        }
-                    }
-                }
+                // 音量指示器
+                AudioLevelIndicator(level: isSelected ? microphoneMonitor.audioLevel : 0)
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 14)
@@ -183,6 +188,53 @@ struct MicrophonePickerView: View {
             )
         }
         .buttonStyle(.plain)
+    }
+}
+
+// MARK: - 音量指示器
+
+struct AudioLevelIndicator: View {
+    let level: Float
+    private let barCount = 8
+    private let barWidth: CGFloat = 3
+    private let barSpacing: CGFloat = 2
+    private let maxHeight: CGFloat = 20
+
+    var body: some View {
+        HStack(spacing: barSpacing) {
+            ForEach(0..<barCount, id: \.self) { index in
+                RoundedRectangle(cornerRadius: 1.5)
+                    .fill(barColor(for: index))
+                    .frame(width: barWidth, height: barHeight(for: index))
+                    .animation(.easeInOut(duration: 0.1), value: level)
+            }
+        }
+        .frame(height: maxHeight)
+    }
+
+    private func barHeight(for index: Int) -> CGFloat {
+        let threshold = Float(index) / Float(barCount)
+        if level > threshold {
+            // 根据音量动态调整高度
+            let intensity = min((level - threshold) * Float(barCount), 1.0)
+            return maxHeight * CGFloat(0.3 + intensity * 0.7)
+        }
+        return maxHeight * 0.3 // 最小高度
+    }
+
+    private func barColor(for index: Int) -> Color {
+        let threshold = Float(index) / Float(barCount)
+        if level > threshold {
+            // 根据位置渐变颜色
+            if index < barCount * 2 / 3 {
+                return Color.accentColor
+            } else if index < barCount * 5 / 6 {
+                return Color.orange
+            } else {
+                return Color.red
+            }
+        }
+        return Color.gray.opacity(0.2)
     }
 }
 
