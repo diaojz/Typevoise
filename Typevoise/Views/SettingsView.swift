@@ -9,6 +9,9 @@ struct SettingsView: View {
     @State private var saveMessage = ""
     @StateObject private var microphoneManager = MicrophoneManager.shared
     @State private var showMicrophonePicker = false
+    @State private var recognitionEngine = "native"
+    @State private var whisperServiceStatus = "未检测"
+    @State private var isCheckingService = false
 
     var body: some View {
         ScrollView {
@@ -99,6 +102,53 @@ struct SettingsView: View {
                     }
                 }
 
+                settingsCard(title: "识别引擎", description: "选择语音识别引擎。Whisper 对远距离、弱信号的识别效果更好。") {
+                    VStack(alignment: .leading, spacing: 16) {
+                        Picker("识别引擎", selection: $recognitionEngine) {
+                            Text("系统原生（快速、免费）").tag("native")
+                            Text("Whisper 本地（更准确）").tag("whisper")
+                        }
+                        .pickerStyle(.radioGroup)
+
+                        if recognitionEngine == "whisper" {
+                            Divider()
+
+                            HStack {
+                                Text("服务状态")
+                                    .font(.headline)
+                                Spacer()
+                                if isCheckingService {
+                                    ProgressView()
+                                        .scaleEffect(0.7)
+                                } else {
+                                    Text(whisperServiceStatus)
+                                        .foregroundColor(statusColor)
+                                }
+                            }
+
+                            Button("检测服务") {
+                                Task {
+                                    await checkWhisperService()
+                                }
+                            }
+                            .buttonStyle(.bordered)
+                            .disabled(isCheckingService)
+
+                            if whisperServiceStatus == "未启动" {
+                                Text("请先启动 Whisper 服务：\n./app/whisper-service/start.sh")
+                                    .font(.footnote)
+                                    .foregroundStyle(.secondary)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                        }
+
+                        Text("• 系统原生：使用 macOS 内置识别，速度快但准确率约 90%\n• Whisper 本地：准确率 95%+，对远距离和噪音环境识别更好")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+
                 HStack(spacing: 14) {
                     Button("保存设置") {
                         save()
@@ -160,18 +210,47 @@ struct SettingsView: View {
         claudeAPIKey = SettingsManager.shared.claudeAPIKey ?? ""
         claudeBaseURL = SettingsManager.shared.claudeBaseURL
         autoPasteEnabled = SettingsManager.shared.autoPasteEnabled
+        recognitionEngine = SettingsManager.shared.recognitionEngine
         hotkeyDescription = KeyCodeMapper.formatHotkey(
             keyCode: SettingsManager.shared.hotkeyKeyCode,
             carbonModifiers: SettingsManager.shared.hotkeyModifiers
         )
         saveMessage = ""
+
+        // 如果选择了 Whisper，自动检测服务状态
+        if recognitionEngine == "whisper" {
+            Task {
+                await checkWhisperService()
+            }
+        }
     }
 
     private func save() {
         SettingsManager.shared.claudeAPIKey = claudeAPIKey.isEmpty ? nil : claudeAPIKey
         SettingsManager.shared.claudeBaseURL = claudeBaseURL
         SettingsManager.shared.autoPasteEnabled = autoPasteEnabled
+        SettingsManager.shared.recognitionEngine = recognitionEngine
         saveMessage = "已保存"
+    }
+
+    private var statusColor: Color {
+        switch whisperServiceStatus {
+        case "运行中": return .green
+        case "未启动": return .red
+        default: return .secondary
+        }
+    }
+
+    private func checkWhisperService() async {
+        isCheckingService = true
+        defer { isCheckingService = false }
+
+        do {
+            let isHealthy = try await WhisperService().checkHealth()
+            whisperServiceStatus = isHealthy ? "运行中" : "未响应"
+        } catch {
+            whisperServiceStatus = "未启动"
+        }
     }
 
     private func recordHotkey() {

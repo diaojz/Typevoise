@@ -64,6 +64,13 @@ class SettingsManager {
         set { UserDefaults.standard.set(newValue, forKey: "selectedMicrophoneID") }
     }
 
+    // MARK: - 识别引擎配置
+
+    var recognitionEngine: String {
+        get { UserDefaults.standard.string(forKey: "recognitionEngine") ?? "native" }
+        set { UserDefaults.standard.set(newValue, forKey: "recognitionEngine") }
+    }
+
     // MARK: - 首次启动标记
 
     var hasCompletedSetup: Bool {

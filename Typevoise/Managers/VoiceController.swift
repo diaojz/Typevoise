@@ -4,6 +4,7 @@ import Speech
 
 class VoiceController {
     private let speechRecognizer = SpeechRecognizer()
+    private let whisperRecognizer = WhisperRecognizer()
     private let hotkeyManager = HotkeyManager.shared
     private var isProcessing = false
     private var pendingInsertTargetBundleID: String?
@@ -11,6 +12,19 @@ class VoiceController {
     private var partialObserver: NSObjectProtocol?
     private var levelObserver: NSObjectProtocol?
     private let verbosePartialLogs = false
+
+    // 当前使用的识别引擎
+    private var currentEngine: String {
+        SettingsManager.shared.recognitionEngine
+    }
+
+    private var isRecording: Bool {
+        if currentEngine == "whisper" {
+            return whisperRecognizer.isRecording
+        } else {
+            return speechRecognizer.isRecording
+        }
+    }
 
     init() {
         setupHotkey()
@@ -65,9 +79,9 @@ class VoiceController {
 
     private func handleHotkeyPressed() {
         print("🎯 快捷键回调被调用")
-        print("   当前状态: isRecording=\(speechRecognizer.isRecording), isProcessing=\(isProcessing)")
+        print("   当前状态: isRecording=\(isRecording), isProcessing=\(isProcessing), engine=\(currentEngine)")
 
-        if speechRecognizer.isRecording {
+        if isRecording {
             print("   → 停止录音")
             stopRecording()
         } else {
@@ -90,6 +104,15 @@ class VoiceController {
             userInfo: ["isRecording": true]
         )
 
+        // 根据引擎选择不同的录音方式
+        if currentEngine == "whisper" {
+            startWhisperRecording()
+        } else {
+            startNativeRecording()
+        }
+    }
+
+    private func startNativeRecording() {
         speechRecognizer.requestMicrophonePermission { [weak self] (micGranted: Bool) in
             guard let self else { return }
             guard micGranted else {
@@ -113,11 +136,7 @@ class VoiceController {
                 try self.speechRecognizer.startRecording { [weak self] (finalText: String?, error: Error?) in
                     guard let self = self else { return }
 
-                    // 不要立即隐藏浮窗，而是切换到处理状态
-                    // RecordingOverlayController.shared.hide()
-
                     if let error = error {
-                        // 出错时隐藏浮窗
                         RecordingOverlayController.shared.hide()
                         self.showError(self.userFacingRecognitionMessage(for: error))
                         NotificationCenter.default.post(name: .voiceRecordingStopped, object: nil)
@@ -133,7 +152,7 @@ class VoiceController {
                     onConfirm: { [weak self] in self?.stopRecording() }
                 )
                 NotificationCenter.default.post(name: .voiceRecordingStarted, object: nil)
-                print("🎤 开始录音")
+                print("🎤 开始录音（原生引擎）")
             } catch {
                 NotificationCenter.default.post(name: .voiceRecordingStopped, object: nil)
                 NotificationCenter.default.post(
@@ -146,24 +165,71 @@ class VoiceController {
         }
     }
 
-    private func stopRecording() {
-        speechRecognizer.stopRecording()
-        // 不要立即隐藏浮窗，等待处理完成
-        // RecordingOverlayController.shared.hide()
-        NotificationCenter.default.post(name: .voiceRecordingStopped, object: nil)
+    private func startWhisperRecording() {
+        do {
+            try whisperRecognizer.startRecording { [weak self] (finalText: String?, error: Error?) in
+                guard let self = self else { return }
 
-        // 发送录音状态通知
+                if let error = error {
+                    RecordingOverlayController.shared.hide()
+                    self.showError(self.userFacingRecognitionMessage(for: error))
+                    NotificationCenter.default.post(name: .voiceRecordingStopped, object: nil)
+
+                    // 如果 Whisper 失败，自动降级到原生引擎
+                    SettingsManager.shared.recognitionEngine = "native"
+                    return
+                }
+
+                let recognizedText = (finalText ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+                self.handleRecognizedText(recognizedText)
+            }
+
+            RecordingOverlayController.shared.show(
+                onCancel: { [weak self] in self?.cancelRecording() },
+                onConfirm: { [weak self] in self?.stopRecording() }
+            )
+            NotificationCenter.default.post(name: .voiceRecordingStarted, object: nil)
+            print("🎤 开始录音（Whisper 引擎）")
+        } catch {
+            NotificationCenter.default.post(name: .voiceRecordingStopped, object: nil)
+            NotificationCenter.default.post(
+                name: NSNotification.Name("RecordingStateChanged"),
+                object: nil,
+                userInfo: ["isRecording": false]
+            )
+            self.showError("录音失败: \(self.userFacingRecognitionMessage(for: error))")
+
+            // Whisper 启动失败，降级到原生引擎
+            SettingsManager.shared.recognitionEngine = "native"
+        }
+    }
+
+    private func stopRecording() {
+        // 立即发送停止通知，更新 UI
+        NotificationCenter.default.post(name: .voiceRecordingStopped, object: nil)
         NotificationCenter.default.post(
             name: NSNotification.Name("RecordingStateChanged"),
             object: nil,
             userInfo: ["isRecording": false]
         )
 
+        // 异步停止录音和转录（避免阻塞主线程）
+        if currentEngine == "whisper" {
+            whisperRecognizer.stopRecording()
+        } else {
+            speechRecognizer.stopRecording()
+        }
+
         print("⏹️  停止录音")
     }
 
     private func cancelRecording() {
-        speechRecognizer.cancelRecognition()
+        if currentEngine == "whisper" {
+            whisperRecognizer.cancelRecognition()
+        } else {
+            speechRecognizer.cancelRecognition()
+        }
+
         RecordingOverlayController.shared.hide()
         NotificationCenter.default.post(name: .voiceRecordingStopped, object: nil)
 
