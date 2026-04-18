@@ -300,10 +300,26 @@ class WhisperModelManager: ObservableObject {
     // MARK: - 辅助方法
 
     private func findPython() -> String {
-        // 优先使用 whisper-service 的虚拟环境
-        let devPath = "/Users/diaoye/Documents/BD/App Store/app/whisper-service/venv/bin/python3"
-        if FileManager.default.fileExists(atPath: devPath) {
-            return devPath
+        // 优先使用 whisper-service 的虚拟环境（使用绝对路径避免符号链接问题）
+        let venvPython = "/Users/diaoye/Documents/BD/App Store/app/whisper-service/venv/bin/python3"
+        if FileManager.default.fileExists(atPath: venvPython) {
+            // 解析符号链接到实际路径
+            if let resolvedPath = try? FileManager.default.destinationOfSymbolicLink(atPath: venvPython) {
+                // 如果是相对路径，转换为绝对路径
+                if resolvedPath.hasPrefix("/") {
+                    return resolvedPath
+                } else {
+                    let venvDir = "/Users/diaoye/Documents/BD/App Store/app/whisper-service/venv/bin"
+                    return (venvDir as NSString).appendingPathComponent(resolvedPath)
+                }
+            }
+            return venvPython
+        }
+
+        // 使用 Homebrew Python
+        let brewPython = "/opt/homebrew/bin/python3"
+        if FileManager.default.fileExists(atPath: brewPython) {
+            return brewPython
         }
 
         // 使用系统 Python
