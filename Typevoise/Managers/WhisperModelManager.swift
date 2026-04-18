@@ -93,10 +93,12 @@ class WhisperModelManager: ObservableObject {
 
     /// 刷新模型列表
     func refreshModels() {
+        print("🔄 [WhisperModelManager] 刷新模型列表")
         availableModels = WhisperModel.allModels.map { model in
             var updatedModel = model
             updatedModel.isDownloaded = isModelDownloaded(model.id)
             updatedModel.isDownloading = downloadProgress[model.id] != nil
+            print("  - \(model.id): downloaded=\(updatedModel.isDownloaded), downloading=\(updatedModel.isDownloading)")
             return updatedModel
         }
     }
@@ -109,9 +111,15 @@ class WhisperModelManager: ObservableObject {
         let modelName = "models--Systran--faster-whisper-\(modelId)"
         let modelPath = huggingfaceCache.appendingPathComponent(modelName)
 
+        print("  🔍 检查模型 \(modelId): \(modelPath.path)")
+
         var isDirectory: ObjCBool = false
         let exists = FileManager.default.fileExists(atPath: modelPath.path, isDirectory: &isDirectory)
-        return exists && isDirectory.boolValue
+        let result = exists && isDirectory.boolValue
+
+        print("    exists=\(exists), isDirectory=\(isDirectory.boolValue), result=\(result)")
+
+        return result
     }
 
     /// 下载模型
@@ -158,7 +166,6 @@ class WhisperModelManager: ObservableObject {
         import os
         from faster_whisper import WhisperModel
         from huggingface_hub import snapshot_download
-        from tqdm import tqdm
 
         model_name = sys.argv[1]
         repo_id = f"Systran/faster-whisper-{model_name}"
@@ -199,16 +206,20 @@ class WhisperModelManager: ObservableObject {
         let tempScript = FileManager.default.temporaryDirectory.appendingPathComponent("download_model.py")
         try script.write(to: tempScript, atomically: true, encoding: .utf8)
 
-        // 使用 bash 激活虚拟环境并执行
+        // 直接使用虚拟环境的 Python，并设置环境变量
         let venvPath = "/Users/diaoye/Documents/BD/App Store/app/whisper-service/venv"
-        let bashScript = """
-        source "\(venvPath)/bin/activate"
-        python3 "\(tempScript.path)" "\(modelId)"
-        """
+        let pythonPath = "\(venvPath)/bin/python3"
 
         let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/bin/bash")
-        process.arguments = ["-c", bashScript]
+        process.executableURL = URL(fileURLWithPath: pythonPath)
+        process.arguments = [tempScript.path, modelId]
+
+        // 设置虚拟环境的环境变量
+        var environment = ProcessInfo.processInfo.environment
+        environment["VIRTUAL_ENV"] = venvPath
+        environment["PATH"] = "\(venvPath)/bin:" + (environment["PATH"] ?? "")
+        environment["PYTHONHOME"] = nil  // 清除 PYTHONHOME 避免冲突
+        process.environment = environment
 
         let outputPipe = Pipe()
         let errorPipe = Pipe()
