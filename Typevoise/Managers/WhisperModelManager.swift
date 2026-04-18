@@ -199,10 +199,16 @@ class WhisperModelManager: ObservableObject {
         let tempScript = FileManager.default.temporaryDirectory.appendingPathComponent("download_model.py")
         try script.write(to: tempScript, atomically: true, encoding: .utf8)
 
-        // 执行 Python 脚本
+        // 使用 bash 激活虚拟环境并执行
+        let venvPath = "/Users/diaoye/Documents/BD/App Store/app/whisper-service/venv"
+        let bashScript = """
+        source "\(venvPath)/bin/activate"
+        python3 "\(tempScript.path)" "\(modelId)"
+        """
+
         let process = Process()
-        process.executableURL = URL(fileURLWithPath: findPython())
-        process.arguments = [tempScript.path, modelId]
+        process.executableURL = URL(fileURLWithPath: "/bin/bash")
+        process.arguments = ["-c", bashScript]
 
         let outputPipe = Pipe()
         let errorPipe = Pipe()

@@ -14,6 +14,15 @@ echo -e "${BLUE}开始构建 Typevoise Release 版本...${NC}"
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 cd "$SCRIPT_DIR"
 
+echo -e "${BLUE}检查并终止正在运行的 Typevoise...${NC}"
+if pgrep -x "Typevoise" > /dev/null; then
+    pkill -x "Typevoise"
+    echo "已终止正在运行的 Typevoise"
+    sleep 1
+else
+    echo "Typevoise 未在运行"
+fi
+
 rm -rf ./build
 
 xcodebuild -project Typevoise.xcodeproj \
