@@ -103,7 +103,12 @@ class WhisperModelManager: ObservableObject {
 
     /// 检查模型是否已下载
     func isModelDownloaded(_ modelId: String) -> Bool {
-        let modelPath = modelsDirectory.appendingPathComponent(modelId)
+        // faster-whisper 使用 Hugging Face 格式：Systran/faster-whisper-{model}
+        let huggingfaceCache = FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent(".cache/huggingface/hub")
+        let modelName = "models--Systran--faster-whisper-\(modelId)"
+        let modelPath = huggingfaceCache.appendingPathComponent(modelName)
+
         var isDirectory: ObjCBool = false
         let exists = FileManager.default.fileExists(atPath: modelPath.path, isDirectory: &isDirectory)
         return exists && isDirectory.boolValue
@@ -153,10 +158,10 @@ class WhisperModelManager: ObservableObject {
         from faster_whisper import WhisperModel
 
         model_name = sys.argv[1]
-        download_root = sys.argv[2]
 
         print(f"正在下载模型: {model_name}")
-        model = WhisperModel(model_name, device="cpu", compute_type="int8", download_root=download_root)
+        # 不指定 download_root，使用默认的 Hugging Face cache
+        model = WhisperModel(model_name, device="cpu", compute_type="int8")
         print(f"模型下载完成: {model_name}")
         """
 
@@ -167,7 +172,7 @@ class WhisperModelManager: ObservableObject {
         // 执行 Python 脚本
         let process = Process()
         process.executableURL = URL(fileURLWithPath: findPython())
-        process.arguments = [tempScript.path, modelId, modelsDirectory.path]
+        process.arguments = [tempScript.path, modelId]
 
         let outputPipe = Pipe()
         let errorPipe = Pipe()
@@ -181,7 +186,7 @@ class WhisperModelManager: ObservableObject {
             if let output = String(data: data, encoding: .utf8), !output.isEmpty {
                 print("📦 [Download] \(output.trimmingCharacters(in: .whitespacesAndNewlines))")
 
-                // 简单的进度估算（实际应该解析下载进度）
+                // 简单的进度估算
                 Task { @MainActor in
                     if let current = self?.downloadProgress[modelId] {
                         self?.downloadProgress[modelId] = min(current + 0.1, 0.9)
@@ -212,7 +217,11 @@ class WhisperModelManager: ObservableObject {
             throw ModelError.cannotDeleteCurrentModel
         }
 
-        let modelPath = modelsDirectory.appendingPathComponent(modelId)
+        // 删除 Hugging Face cache 中的模型
+        let huggingfaceCache = FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent(".cache/huggingface/hub")
+        let modelName = "models--Systran--faster-whisper-\(modelId)"
+        let modelPath = huggingfaceCache.appendingPathComponent(modelName)
 
         guard FileManager.default.fileExists(atPath: modelPath.path) else {
             throw ModelError.modelNotFound
@@ -243,9 +252,13 @@ class WhisperModelManager: ObservableObject {
         NotificationCenter.default.post(name: .whisperModelChanged, object: modelId)
     }
 
-    /// 获取模型存储路径
+    /// 获取模型存储路径（已废弃，faster-whisper 使用 Hugging Face cache）
     func getModelPath(_ modelId: String) -> String {
-        return modelsDirectory.appendingPathComponent(modelId).path
+        // 返回 Hugging Face cache 路径
+        let huggingfaceCache = FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent(".cache/huggingface/hub")
+        let modelName = "models--Systran--faster-whisper-\(modelId)"
+        return huggingfaceCache.appendingPathComponent(modelName).path
     }
 
     // MARK: - 辅助方法
