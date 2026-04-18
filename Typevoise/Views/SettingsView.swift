@@ -9,6 +9,7 @@ struct SettingsView: View {
     @State private var saveMessage = ""
     @StateObject private var microphoneManager = MicrophoneManager.shared
     @StateObject private var serviceManager = WhisperServiceManager.shared
+    @StateObject private var modelManager = WhisperModelManager.shared
     @State private var showMicrophonePicker = false
     @State private var recognitionEngine = "native"
 
@@ -161,6 +162,22 @@ struct SettingsView: View {
                                     .font(.caption)
                                     .foregroundColor(.secondary)
                             }
+
+                            Divider()
+
+                            // 模型管理
+                            VStack(alignment: .leading, spacing: 12) {
+                                Text("模型管理")
+                                    .font(.headline)
+
+                                Text("当前模型: \(modelManager.currentModel)")
+                                    .font(.subheadline)
+                                    .foregroundStyle(.secondary)
+
+                                ForEach(modelManager.availableModels) { model in
+                                    modelRow(model)
+                                }
+                            }
                         }
 
                         Text("• 系统原生：使用 macOS 内置识别，速度快但准确率约 90%\n• Whisper 本地：准确率 95%+，对远距离和噪音环境识别更好")
@@ -188,6 +205,7 @@ struct SettingsView: View {
         }
         .onAppear {
             load()
+            modelManager.refreshModels()
         }
         .sheet(isPresented: $showMicrophonePicker) {
             MicrophonePickerView()
@@ -272,5 +290,98 @@ struct SettingsView: View {
         window.center()
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
+    }
+
+    private func modelRow(_ model: WhisperModelManager.WhisperModel) -> some View {
+        HStack(spacing: 16) {
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(spacing: 8) {
+                    Text(model.name)
+                        .font(.headline)
+                    if model.id == modelManager.currentModel {
+                        Text("当前")
+                            .font(.caption)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Color.blue.opacity(0.2))
+                            .foregroundColor(.blue)
+                            .cornerRadius(4)
+                    }
+                }
+                Text("\(model.size) • 准确率: \(model.accuracy) • 速度: \(model.speed)")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Text(model.description)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            Spacer()
+
+            if model.isDownloading {
+                HStack(spacing: 8) {
+                    ProgressView()
+                        .scaleEffect(0.7)
+                    if let progress = modelManager.downloadProgress[model.id] {
+                        Text("\(Int(progress * 100))%")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            } else if model.isDownloaded {
+                HStack(spacing: 8) {
+                    if model.id != modelManager.currentModel {
+                        Button("切换") {
+                            switchToModel(model.id)
+                        }
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
+
+                        Button("删除") {
+                            deleteModel(model.id)
+                        }
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
+                        .foregroundColor(.red)
+                    }
+                }
+            } else {
+                Button("下载") {
+                    downloadModel(model.id)
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.small)
+            }
+        }
+        .padding(.vertical, 8)
+    }
+
+    private func downloadModel(_ modelId: String) {
+        Task {
+            do {
+                try await modelManager.downloadModel(modelId)
+                saveMessage = "模型下载完成"
+            } catch {
+                saveMessage = "下载失败: \(error.localizedDescription)"
+            }
+        }
+    }
+
+    private func deleteModel(_ modelId: String) {
+        do {
+            try modelManager.deleteModel(modelId)
+            saveMessage = "模型已删除"
+        } catch {
+            saveMessage = "删除失败: \(error.localizedDescription)"
+        }
+    }
+
+    private func switchToModel(_ modelId: String) {
+        do {
+            try modelManager.switchModel(modelId)
+            saveMessage = "已切换模型，需要重启服务生效"
+        } catch {
+            saveMessage = "切换失败: \(error.localizedDescription)"
+        }
     }
 }
