@@ -14,7 +14,7 @@ class WhisperModelManager: ObservableObject {
     private let userDefaults = UserDefaults.standard
 
     // 模型信息
-    struct WhisperModel: Identifiable {
+    struct WhisperModel: Identifiable, Equatable {
         let id: String
         let name: String
         let size: String
