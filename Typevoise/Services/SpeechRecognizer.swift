@@ -132,9 +132,26 @@ class SpeechRecognizer: ObservableObject {
             )
             if status == kAudioHardwareNoError {
                 print("🎤 [SpeechRecognizer] 已设置麦克风设备: \(selectedDeviceID)")
+
+                // 验证切换是否成功
+                var currentDeviceID = AudioDeviceID(0)
+                var currentPropertySize = UInt32(MemoryLayout<AudioDeviceID>.size)
+                AudioObjectGetPropertyData(
+                    AudioObjectID(kAudioObjectSystemObject),
+                    &propertyAddress,
+                    0,
+                    nil,
+                    &currentPropertySize,
+                    &currentDeviceID
+                )
+                if currentDeviceID != deviceID {
+                    print("⚠️  [SpeechRecognizer] 设备切换验证失败，当前设备: \(currentDeviceID)")
+                }
             } else {
                 print("⚠️  [SpeechRecognizer] 设置麦克风失败 (status: \(status))，使用默认设备")
             }
+        } else {
+            print("ℹ️  [SpeechRecognizer] 未指定麦克风，使用系统默认输入设备")
         }
 
         let inputNode = audioEngine.inputNode

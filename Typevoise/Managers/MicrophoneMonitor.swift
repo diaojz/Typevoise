@@ -15,31 +15,12 @@ class MicrophoneMonitor: ObservableObject {
         // 先停止之前的监听
         stopMonitoring()
 
+        // 注意：不修改系统默认设备，避免与 SpeechRecognizer 冲突
+        // 只监听当前系统默认输入设备的音量
+        // 用户需要在系统设置中临时切换默认输入来测试不同麦克风
+
         audioEngine = AVAudioEngine()
         guard let audioEngine = audioEngine else { return }
-
-        // 设置指定的麦克风设备
-        if let deviceID = deviceID,
-           let deviceIDValue = AudioDeviceID(deviceID) {
-            var propertyAddress = AudioObjectPropertyAddress(
-                mSelector: kAudioHardwarePropertyDefaultInputDevice,
-                mScope: kAudioObjectPropertyScopeGlobal,
-                mElement: kAudioObjectPropertyElementMain
-            )
-            var deviceIDVar = deviceIDValue
-            let propertySize = UInt32(MemoryLayout<AudioDeviceID>.size)
-            let status = AudioObjectSetPropertyData(
-                AudioObjectID(kAudioObjectSystemObject),
-                &propertyAddress,
-                0,
-                nil,
-                propertySize,
-                &deviceIDVar
-            )
-            if status != kAudioHardwareNoError {
-                print("⚠️  [Monitor] 设置设备失败: \(status)")
-            }
-        }
 
         let inputNode = audioEngine.inputNode
         let recordingFormat = inputNode.outputFormat(forBus: 0)

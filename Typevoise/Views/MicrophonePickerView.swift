@@ -29,9 +29,12 @@ struct MicrophonePickerView: View {
 
             // 说明文字
             VStack(alignment: .leading, spacing: 8) {
-                Text("选择能捕捉到您声音的麦克风。如果显示没有移动，请尝试其他麦克风。")
+                Text("选择录音时使用的麦克风设备。")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
+                Text("提示：音量指示器仅显示当前系统默认麦克风，选择其他设备后需在录音时生效。")
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
                     .fixedSize(horizontal: false, vertical: true)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -51,12 +54,13 @@ struct MicrophonePickerView: View {
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 40)
                     } else {
-                        // 自动检测选项
+                        // 自动检测选项 - 显示实际的默认设备名称
+                        let defaultDevice = microphoneManager.availableDevices.first { $0.isDefault }
                         microphoneRow(
-                            name: "自动检测 (MacBook Pro麦克风)",
+                            name: "自动检测 (\(defaultDevice?.name ?? "系统默认"))",
                             subtitle: "使用系统默认麦克风",
                             isSelected: selectedID == nil,
-                            isRecommended: true
+                            isRecommended: defaultDevice?.name.contains("MacBook") == true || defaultDevice?.name.contains("内置") == true
                         ) {
                             selectedID = nil
                         }
