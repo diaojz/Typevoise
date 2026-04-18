@@ -155,14 +155,44 @@ class WhisperModelManager: ObservableObject {
     private func downloadModelViaPython(_ modelId: String) async throws {
         let script = """
         import sys
+        import os
         from faster_whisper import WhisperModel
+        from huggingface_hub import snapshot_download
+        from tqdm import tqdm
 
         model_name = sys.argv[1]
+        repo_id = f"Systran/faster-whisper-{model_name}"
 
-        print(f"正在下载模型: {model_name}")
-        # 不指定 download_root，使用默认的 Hugging Face cache
-        model = WhisperModel(model_name, device="cpu", compute_type="int8")
-        print(f"模型下载完成: {model_name}")
+        print("PROGRESS:0")
+        sys.stdout.flush()
+
+        try:
+            # 使用 huggingface_hub 下载，可以获取进度
+            print(f"开始下载模型: {model_name}")
+            sys.stdout.flush()
+
+            # 下载模型文件
+            cache_dir = snapshot_download(
+                repo_id=repo_id,
+                cache_dir=None,  # 使用默认缓存
+                resume_download=True
+            )
+
+            print("PROGRESS:80")
+            sys.stdout.flush()
+
+            # 加载模型验证
+            print(f"验证模型: {model_name}")
+            sys.stdout.flush()
+            model = WhisperModel(model_name, device="cpu", compute_type="int8")
+
+            print("PROGRESS:100")
+            sys.stdout.flush()
+            print(f"模型下载完成: {model_name}")
+
+        except Exception as e:
+            print(f"ERROR: {str(e)}", file=sys.stderr)
+            sys.exit(1)
         """
 
         // 创建临时脚本文件
@@ -184,12 +214,18 @@ class WhisperModelManager: ObservableObject {
         outputHandle.readabilityHandler = { [weak self] handle in
             let data = handle.availableData
             if let output = String(data: data, encoding: .utf8), !output.isEmpty {
-                print("📦 [Download] \(output.trimmingCharacters(in: .whitespacesAndNewlines))")
+                let lines = output.components(separatedBy: .newlines)
+                for line in lines where !line.isEmpty {
+                    print("📦 [Download] \(line)")
 
-                // 简单的进度估算
-                Task { @MainActor in
-                    if let current = self?.downloadProgress[modelId] {
-                        self?.downloadProgress[modelId] = min(current + 0.1, 0.9)
+                    // 解析进度
+                    if line.hasPrefix("PROGRESS:") {
+                        if let progressStr = line.components(separatedBy: ":").last,
+                           let progress = Double(progressStr) {
+                            Task { @MainActor in
+                                self?.downloadProgress[modelId] = progress / 100.0
+                            }
+                        }
                     }
                 }
             }
