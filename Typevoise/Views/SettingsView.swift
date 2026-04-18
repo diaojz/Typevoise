@@ -8,10 +8,9 @@ struct SettingsView: View {
     @State private var autoPasteEnabled = true
     @State private var saveMessage = ""
     @StateObject private var microphoneManager = MicrophoneManager.shared
+    @StateObject private var serviceManager = WhisperServiceManager.shared
     @State private var showMicrophonePicker = false
     @State private var recognitionEngine = "native"
-    @State private var whisperServiceStatus = "未检测"
-    @State private var isCheckingService = false
 
     var body: some View {
         ScrollView {
@@ -113,32 +112,54 @@ struct SettingsView: View {
                         if recognitionEngine == "whisper" {
                             Divider()
 
+                            // 服务状态显示
                             HStack {
                                 Text("服务状态")
                                     .font(.headline)
                                 Spacer()
-                                if isCheckingService {
-                                    ProgressView()
-                                        .scaleEffect(0.7)
+                                HStack(spacing: 8) {
+                                    Circle()
+                                        .fill(serviceStatusColor)
+                                        .frame(width: 8, height: 8)
+                                    Text(serviceManager.serviceStatus.description)
+                                        .foregroundColor(serviceStatusColor)
+                                }
+                            }
+
+                            // 服务控制按钮
+                            HStack(spacing: 12) {
+                                if serviceManager.isRunning {
+                                    Button("停止服务") {
+                                        Task {
+                                            await serviceManager.stopService()
+                                        }
+                                    }
+                                    .buttonStyle(.bordered)
                                 } else {
-                                    Text(whisperServiceStatus)
-                                        .foregroundColor(statusColor)
+                                    Button("启动服务") {
+                                        Task {
+                                            do {
+                                                try await serviceManager.startService()
+                                            } catch {
+                                                print("❌ 启动服务失败: \(error)")
+                                            }
+                                        }
+                                    }
+                                    .buttonStyle(.borderedProminent)
                                 }
+
+                                Button("检测服务") {
+                                    Task {
+                                        await serviceManager.checkServiceStatus()
+                                    }
+                                }
+                                .buttonStyle(.bordered)
                             }
 
-                            Button("检测服务") {
-                                Task {
-                                    await checkWhisperService()
-                                }
-                            }
-                            .buttonStyle(.bordered)
-                            .disabled(isCheckingService)
-
-                            if whisperServiceStatus == "未启动" {
-                                Text("请先启动 Whisper 服务：\n./app/whisper-service/start.sh")
-                                    .font(.footnote)
-                                    .foregroundStyle(.secondary)
-                                    .fixedSize(horizontal: false, vertical: true)
+                            if !serviceManager.isRunning {
+                                Text("提示：使用 Whisper 引擎前需要先启动服务")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
                             }
                         }
 
@@ -216,13 +237,6 @@ struct SettingsView: View {
             carbonModifiers: SettingsManager.shared.hotkeyModifiers
         )
         saveMessage = ""
-
-        // 如果选择了 Whisper，自动检测服务状态
-        if recognitionEngine == "whisper" {
-            Task {
-                await checkWhisperService()
-            }
-        }
     }
 
     private func save() {
@@ -233,23 +247,12 @@ struct SettingsView: View {
         saveMessage = "已保存"
     }
 
-    private var statusColor: Color {
-        switch whisperServiceStatus {
-        case "运行中": return .green
-        case "未启动": return .red
-        default: return .secondary
-        }
-    }
-
-    private func checkWhisperService() async {
-        isCheckingService = true
-        defer { isCheckingService = false }
-
-        do {
-            let isHealthy = try await WhisperService().checkHealth()
-            whisperServiceStatus = isHealthy ? "运行中" : "未响应"
-        } catch {
-            whisperServiceStatus = "未启动"
+    private var serviceStatusColor: Color {
+        switch serviceManager.serviceStatus {
+        case .running: return .green
+        case .stopped: return .gray
+        case .starting, .stopping: return .orange
+        case .error: return .red
         }
     }
 

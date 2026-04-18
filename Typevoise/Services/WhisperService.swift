@@ -43,9 +43,9 @@ class WhisperService {
 
 // MARK: - 响应模型
 
-struct HealthResponse: Codable {
-    let status: String
-    let model: String
+public struct HealthResponse: Codable {
+    public let status: String
+    public let model: String
 }
 
 struct TranscribeResponse: Codable {
