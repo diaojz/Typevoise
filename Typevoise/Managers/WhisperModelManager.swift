@@ -67,7 +67,7 @@ class WhisperModelManager: ObservableObject {
                 size: "1.5 GB",
                 accuracy: "最高",
                 speed: "最慢",
-                description: "最高准确率，适合专业场景",
+                description: "最高准确率，适合专业场景（需要 Hugging Face 登录）",
                 isDownloaded: false
             )
         ]
@@ -166,39 +166,48 @@ class WhisperModelManager: ObservableObject {
         import os
         from faster_whisper import WhisperModel
         from huggingface_hub import snapshot_download
+        from tqdm import tqdm
 
         model_name = sys.argv[1]
         repo_id = f"Systran/faster-whisper-{model_name}"
 
-        print("PROGRESS:0")
-        sys.stdout.flush()
+        print("PROGRESS:0", flush=True)
+
+        class ProgressCallback:
+            def __init__(self):
+                self.last_progress = 0
+
+            def __call__(self, t):
+                # tqdm 回调，每次更新时输出进度
+                if hasattr(t, 'n') and hasattr(t, 'total') and t.total:
+                    progress = int((t.n / t.total) * 70)  # 0-70% 用于下载
+                    if progress > self.last_progress:
+                        self.last_progress = progress
+                        print(f"PROGRESS:{progress}", flush=True)
 
         try:
-            # 使用 huggingface_hub 下载，可以获取进度
-            print(f"开始下载模型: {model_name}")
-            sys.stdout.flush()
+            print(f"开始下载模型: {model_name}", flush=True)
 
-            # 下载模型文件
+            # 下载模型文件（带进度回调）
+            progress_cb = ProgressCallback()
             cache_dir = snapshot_download(
                 repo_id=repo_id,
-                cache_dir=None,  # 使用默认缓存
-                resume_download=True
+                cache_dir=None,
+                resume_download=True,
+                tqdm_class=lambda **kwargs: tqdm(**kwargs, file=sys.stdout, disable=False)
             )
 
-            print("PROGRESS:80")
-            sys.stdout.flush()
+            print("PROGRESS:80", flush=True)
+            print(f"验证模型: {model_name}", flush=True)
 
             # 加载模型验证
-            print(f"验证模型: {model_name}")
-            sys.stdout.flush()
             model = WhisperModel(model_name, device="cpu", compute_type="int8")
 
-            print("PROGRESS:100")
-            sys.stdout.flush()
-            print(f"模型下载完成: {model_name}")
+            print("PROGRESS:100", flush=True)
+            print(f"模型下载完成: {model_name}", flush=True)
 
         except Exception as e:
-            print(f"ERROR: {str(e)}", file=sys.stderr)
+            print(f"ERROR: {str(e)}", file=sys.stderr, flush=True)
             sys.exit(1)
         """
 
@@ -206,19 +215,20 @@ class WhisperModelManager: ObservableObject {
         let tempScript = FileManager.default.temporaryDirectory.appendingPathComponent("download_model.py")
         try script.write(to: tempScript, atomically: true, encoding: .utf8)
 
-        // 直接使用虚拟环境的 Python，并设置环境变量
+        // 使用虚拟环境的 Python
         let venvPath = "/Users/diaoye/Documents/BD/App Store/app/whisper-service/venv"
         let pythonPath = "\(venvPath)/bin/python3"
 
         let process = Process()
         process.executableURL = URL(fileURLWithPath: pythonPath)
-        process.arguments = [tempScript.path, modelId]
+        process.arguments = ["-u", tempScript.path, modelId]  // -u 强制无缓冲输出
 
         // 设置虚拟环境的环境变量
         var environment = ProcessInfo.processInfo.environment
         environment["VIRTUAL_ENV"] = venvPath
         environment["PATH"] = "\(venvPath)/bin:" + (environment["PATH"] ?? "")
         environment["PYTHONHOME"] = nil  // 清除 PYTHONHOME 避免冲突
+        environment["PYTHONUNBUFFERED"] = "1"  // 禁用缓冲
         process.environment = environment
 
         let outputPipe = Pipe()
@@ -226,10 +236,15 @@ class WhisperModelManager: ObservableObject {
         process.standardOutput = outputPipe
         process.standardError = errorPipe
 
-        // 监控输出更新进度
+        // 监控输出更新进度（使用通知方式，更可靠）
         let outputHandle = outputPipe.fileHandleForReading
-        outputHandle.readabilityHandler = { [weak self] handle in
-            let data = handle.availableData
+
+        NotificationCenter.default.addObserver(
+            forName: .NSFileHandleDataAvailable,
+            object: outputHandle,
+            queue: nil
+        ) { [weak self] _ in
+            let data = outputHandle.availableData
             if let output = String(data: data, encoding: .utf8), !output.isEmpty {
                 let lines = output.components(separatedBy: .newlines)
                 for line in lines where !line.isEmpty {
@@ -241,22 +256,38 @@ class WhisperModelManager: ObservableObject {
                            let progress = Double(progressStr) {
                             Task { @MainActor in
                                 self?.downloadProgress[modelId] = progress / 100.0
+                                self?.refreshModels()
                             }
                         }
                     }
                 }
             }
+            outputHandle.waitForDataInBackgroundAndNotify()
         }
 
-        try process.run()
-        process.waitUntilExit()
+        outputHandle.waitForDataInBackgroundAndNotify()
 
-        outputHandle.readabilityHandler = nil
+        try process.run()
+
+        // 异步等待进程结束（不阻塞主线程）
+        await withCheckedContinuation { continuation in
+            process.terminationHandler = { _ in
+                continuation.resume()
+            }
+        }
+
+        NotificationCenter.default.removeObserver(self, name: .NSFileHandleDataAvailable, object: outputHandle)
 
         if process.terminationStatus != 0 {
             let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
             let errorOutput = String(data: errorData, encoding: .utf8) ?? ""
             print("❌ [WhisperModelManager] 下载失败: \(errorOutput)")
+
+            // 检查是否是 401 认证错误
+            if errorOutput.contains("401") || errorOutput.contains("Repository Not Found") {
+                throw ModelError.downloadFailed("该模型需要 Hugging Face 账号认证。请使用 tiny/base/small/medium 模型，或在终端运行 'huggingface-cli login' 后重试。")
+            }
+
             throw ModelError.downloadFailed(errorOutput)
         }
 

@@ -93,6 +93,12 @@ class VoiceController {
     private func startRecording() {
         guard !isProcessing else { return }
 
+        // 如果已经在录音，先停止
+        if speechRecognizer.isRecording {
+            print("⚠️  [VoiceController] 检测到正在录音，先停止")
+            speechRecognizer.cancelRecognition()
+        }
+
         // 记录开始录音时的前台应用，用于后续自动粘贴目标校验
         pendingInsertTargetBundleID = NSWorkspace.shared.frontmostApplication?.bundleIdentifier
         pendingInsertTargetPID = NSWorkspace.shared.frontmostApplication?.processIdentifier
