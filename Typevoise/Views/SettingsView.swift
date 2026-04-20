@@ -67,6 +67,10 @@ struct SettingsView: View {
                     VStack(alignment: .leading, spacing: 14) {
                         Toggle("识别完成后自动粘贴到当前光标", isOn: $autoPasteEnabled)
                             .toggleStyle(.switch)
+                            .onChange(of: autoPasteEnabled) { newValue in
+                                SettingsManager.shared.autoPasteEnabled = newValue
+                                print("✅ [Settings] 自动粘贴设置已更新: \(newValue)")
+                            }
 
                         Text("关闭后仅复制到剪贴板，需要手动按 ⌘V。")
                             .font(.footnote)
