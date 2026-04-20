@@ -271,7 +271,12 @@ class VoiceController {
 
         Task {
             do {
-                let polishedText = try await ClaudeService.shared.polishText(recognizedText)
+                let polishedText = try await ClaudeService.shared.polishText(recognizedText) { progress in
+                    // 在主线程更新进度
+                    DispatchQueue.main.async {
+                        RecordingOverlayController.shared.updateProgress(progress)
+                    }
+                }
                 print("✨ 润色结果: \(polishedText)")
 
                 await MainActor.run {

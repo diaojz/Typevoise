@@ -5,7 +5,7 @@ class ClaudeService {
 
     private init() {}
 
-    func polishText(_ text: String) async throws -> String {
+    func polishText(_ text: String, progressHandler: ((Double) -> Void)? = nil) async throws -> String {
         guard let apiKey = SettingsManager.shared.claudeAPIKey else {
             throw ClaudeError.missingAPIKey
         }
@@ -14,6 +14,9 @@ class ClaudeService {
         guard let url = URL(string: "\(baseURL)/v1/messages") else {
             throw ClaudeError.invalidURL
         }
+
+        // 初始进度
+        progressHandler?(0.1)
 
         let prompt = """
         你是语音转文字润色助手。用户通过语音输入了以下内容：
@@ -40,7 +43,8 @@ class ClaudeService {
             for authMode in authModes {
                 do {
                     print("🤖 [Claude] 尝试模型: \(model)，鉴权方式: \(authMode.debugName)")
-                    return try await sendRequest(url: url, apiKey: apiKey, model: model, prompt: prompt, authMode: authMode)
+                    progressHandler?(0.3)
+                    return try await sendRequest(url: url, apiKey: apiKey, model: model, prompt: prompt, authMode: authMode, progressHandler: progressHandler)
                 } catch let error as ClaudeError {
                     lastError = error
                     switch error {
@@ -67,7 +71,8 @@ class ClaudeService {
         throw lastError ?? ClaudeError.invalidResponse
     }
 
-    private func sendRequest(url: URL, apiKey: String, model: String, prompt: String, authMode: AuthMode) async throws -> String {
+    private func sendRequest(url: URL, apiKey: String, model: String, prompt: String, authMode: AuthMode, progressHandler: ((Double) -> Void)? = nil) async throws -> String {
+        progressHandler?(0.4)
         let requestBody: [String: Any] = [
             "model": model,
             "max_tokens": 4096,
@@ -87,7 +92,9 @@ class ClaudeService {
         authMode.apply(apiKey: apiKey, to: &request)
         request.httpBody = try JSONSerialization.data(withJSONObject: requestBody)
 
+        progressHandler?(0.5)
         let (data, response) = try await URLSession.shared.data(for: request)
+        progressHandler?(0.8)
 
         guard let httpResponse = response as? HTTPURLResponse else {
             throw ClaudeError.invalidResponse
@@ -119,6 +126,7 @@ class ClaudeService {
             )
         }
 
+        progressHandler?(1.0)
         return text.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 

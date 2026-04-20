@@ -11,6 +11,7 @@ final class RecordingOverlayState: ObservableObject {
     @Published var transcript: String = ""
     @Published var level: CGFloat = 0
     @Published var state: OverlayState = .recording
+    @Published var progress: Double = 0.0 // 处理进度 0.0 ~ 1.0
 }
 
 struct RecordingOverlayView: View {
@@ -19,26 +20,64 @@ struct RecordingOverlayView: View {
     let onConfirm: () -> Void
 
     var body: some View {
-        VStack(spacing: 10) {
+        Group {
             // 根据状态显示不同的内容
             switch state.state {
             case .recording:
-                recordingView
+                recordingContentView
             case .processing:
-                processingView
+                processingContentView
             case .completed:
-                completedView
+                completedContentView
             }
+        }
+    }
+
+    // 录音状态的完整视图（带背景）
+    private var recordingContentView: some View {
+        VStack(spacing: 10) {
+            recordingView
 
             // 底部文本
-            if !bottomText.isEmpty {
-                Text(bottomText)
+            if !state.transcript.isEmpty {
+                Text(state.transcript)
                     .font(.system(size: 15, weight: .medium))
                     .foregroundColor(.white.opacity(0.92))
                     .lineLimit(2)
                     .multilineTextAlignment(.center)
                     .frame(maxWidth: .infinity)
             }
+        }
+        .padding(.horizontal, 24)
+        .padding(.vertical, 14)
+        .frame(minWidth: 300, maxWidth: .infinity)
+        .background(Color.black.opacity(0.88))
+        .clipShape(Capsule())
+        .overlay(
+            Capsule().stroke(Color.white.opacity(0.22), lineWidth: 1)
+        )
+    }
+
+    // 处理中状态的完整视图（带进度条背景）
+    private var processingContentView: some View {
+        ShimmerProgressView(
+            progress: state.progress,
+            text: "正在润色文本..."
+        )
+        .frame(minWidth: 300, maxWidth: .infinity)
+    }
+
+    // 完成状态的完整视图（带背景）
+    private var completedContentView: some View {
+        VStack(spacing: 10) {
+            completedView
+
+            Text("已插入到光标位置")
+                .font(.system(size: 15, weight: .medium))
+                .foregroundColor(.white.opacity(0.92))
+                .lineLimit(2)
+                .multilineTextAlignment(.center)
+                .frame(maxWidth: .infinity)
         }
         .padding(.horizontal, 24)
         .padding(.vertical, 14)
@@ -85,7 +124,7 @@ struct RecordingOverlayView: View {
         }
     }
 
-    // 处理中状态视图
+    // 处理中状态视图（内容部分）
     private var processingView: some View {
         HStack(spacing: 10) {
             ProgressView()
@@ -93,18 +132,17 @@ struct RecordingOverlayView: View {
                 .scaleEffect(1.0)
                 .frame(width: 18, height: 18)
 
-            Text("Thinking...")
+            Text("处理中")
                 .font(.system(size: 16, weight: .medium))
                 .foregroundColor(.white)
 
-            // 占位，保证文本严格居中（与左侧 loading 等宽）
             Color.clear
                 .frame(width: 18, height: 18)
         }
         .frame(height: 40)
     }
 
-    // 完成状态视图
+    // 完成状态视图（内容部分）
     private var completedView: some View {
         HStack(spacing: 10) {
             Image(systemName: "checkmark.circle.fill")
@@ -116,18 +154,6 @@ struct RecordingOverlayView: View {
                 .foregroundColor(.white)
         }
         .frame(height: 40)
-    }
-
-    // 底部文本
-    private var bottomText: String {
-        switch state.state {
-        case .recording:
-            return state.transcript.isEmpty ? "" : state.transcript
-        case .processing:
-            return "正在润色文本..."
-        case .completed:
-            return "已插入到光标位置"
-        }
     }
 }
 
@@ -201,5 +227,57 @@ private struct AudioWaveformView: View {
         let activeHeight = minHeight + normalizedLevel * (maxBarHeight - minHeight) * (0.6 + combinedWave * 0.4) * centerBoost
 
         return normalizedLevel < 0.05 ? idleHeight : activeHeight
+    }
+}
+
+// MARK: - 五彩渐变进度条视图
+private struct ShimmerProgressView: View {
+    let progress: Double // 0.0 ~ 1.0，真实进度
+    let text: String
+
+    private let rainbowColors: [Color] = [
+        Color(red: 1.0, green: 0.3, blue: 0.3),   // 红
+        Color(red: 1.0, green: 0.6, blue: 0.2),   // 橙
+        Color(red: 1.0, green: 0.9, blue: 0.2),   // 黄
+        Color(red: 0.3, green: 1.0, blue: 0.5),   // 绿
+        Color(red: 0.2, green: 0.6, blue: 1.0),   // 蓝
+        Color(red: 0.6, green: 0.3, blue: 1.0),   // 紫
+    ]
+
+    var body: some View {
+        GeometryReader { geometry in
+            ZStack {
+                // 底层背景（深色胶囊）
+                Capsule()
+                    .fill(Color.black.opacity(0.88))
+                    .overlay(
+                        Capsule().stroke(Color.white.opacity(0.22), lineWidth: 1)
+                    )
+
+                // 进度条：从左到右填充的彩虹渐变背景
+                HStack(spacing: 0) {
+                    Capsule()
+                        .fill(
+                            LinearGradient(
+                                colors: rainbowColors,
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        )
+                        .frame(width: geometry.size.width * progress * 2)
+                        .animation(.easeOut(duration: 0.3), value: progress)
+
+                    Spacer(minLength: 0)
+                }
+
+                // 文字层（始终居中显示）
+                Text(text)
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.horizontal, 24)
+            }
+        }
+        .frame(height: 60)
     }
 }

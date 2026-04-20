@@ -65,6 +65,11 @@ final class RecordingOverlayController {
         state.level = max(0, min(1, level))
     }
 
+    // 更新处理进度
+    func updateProgress(_ progress: Double) {
+        state.progress = max(0, min(1, progress))
+    }
+
     // 切换到处理中状态
     func showProcessing() {
         guard let window else {
@@ -79,6 +84,7 @@ final class RecordingOverlayController {
         // 直接更新状态（调用方已确保在主线程）
         state.state = .processing
         state.level = 0
+        state.progress = 0.0
         setWindowFrame(window, width: preferredWidth(for: "正在润色文本...", state: .processing))
         // 清空按钮回调，处理中状态不需要交互
         onCancel = nil
@@ -121,6 +127,7 @@ final class RecordingOverlayController {
         state.state = .recording
         state.transcript = ""
         state.level = 0
+        state.progress = 0.0
         onCancel = nil
         onConfirm = nil
         print("🪟 [Overlay] 录音浮层隐藏")
