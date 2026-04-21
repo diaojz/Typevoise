@@ -11,9 +11,23 @@
 - 📝 历史记录管理（查看、搜索、复制所有转写记录）
 - 🔒 隐私安全，所有处理在本地完成
 
-## 快速安装（推荐）
+## 安装方式
 
-**适合完全不懂代码的用户：**
+### 方式 1: 下载预编译版本（推荐，最简单）
+
+**适合所有用户，无需任何开发工具：**
+
+1. 访问 [Releases 页面](https://github.com/diaojz/Typevoise/releases)
+2. 下载最新版本的 `.dmg` 文件
+3. 双击打开 DMG 文件
+4. 将 Typevoise 拖到 Applications 文件夹
+5. 从 Launchpad 或 Applications 启动应用
+
+就这么简单！🎉
+
+### 方式 2: 一键安装脚本（从源码构建）
+
+**适合想从源码构建的用户：**
 
 1. 下载项目：
    - 访问 https://github.com/diaojz/Typevoise
@@ -33,8 +47,6 @@
 
 4. 按照屏幕提示完成安装
 
-就这么简单！🎉
-
 ## 系统要求
 
 - macOS 13.0 或更高版本
@@ -47,9 +59,11 @@
 - Xcode 15.0+
 - Swift 5.9+
 
-## 开发者安装
+### 方式 3: 开发者手动构建
 
-如果你是开发者，想要从源码构建：
+**适合开发者，需要 Xcode：**
+
+#### 使用自动化脚本
 
 ```bash
 # 克隆主仓库
@@ -59,22 +73,19 @@ cd Typevoise
 # 初始化子模块（包含 whisper-service）
 git submodule update --init --recursive
 
-# 一键构建安装
+# 方式 A: 一键构建安装
 ./install.sh
-```
 
-或者手动构建：
-
-```bash
+# 方式 B: 快速部署（仅构建和安装，不检查环境）
 ./deploy.sh
 ```
 
-这个脚本会:
+`deploy.sh` 脚本会:
 1. 构建 Release 版本
 2. 自动安装到 `/Applications` 目录
 3. 清理旧版本
 
-### 方式 2: 手动构建
+#### 手动构建
 
 ```bash
 # 构建 Release 版本
@@ -88,7 +99,7 @@ xcodebuild -project Typevoise.xcodeproj \
 cp -R ./build/Build/Products/Release/Typevoise.app /Applications/
 ```
 
-### 方式 3: 使用 Xcode
+#### 使用 Xcode
 
 1. 在 Xcode 中打开 `Typevoise.xcodeproj`
 2. 选择 Product → Archive
@@ -97,12 +108,22 @@ cp -R ./build/Build/Products/Release/Typevoise.app /Applications/
 
 ## 首次使用
 
-1. 从 Launchpad 或 Applications 文件夹启动 Typevoise
+1. 启动 Typevoise
+   - 从 Launchpad 或 Applications 文件夹启动
+   - 如果提示"无法打开"，右键点击应用选择"打开"
+
 2. 授予必要的权限:
-   - 麦克风权限
-   - 语音识别权限
-   - **辅助功能权限**(在 系统设置 → 隐私与安全性 → 辅助功能 中手动添加)
-3. 使用快捷键 ⌘⇧Space 开始语音输入
+   - **麦克风权限**（用于录音）
+   - **语音识别权限**（用于转文字）
+   - **辅助功能权限**（用于自动粘贴）
+     - 在 系统设置 → 隐私与安全性 → 辅助功能 中手动添加 Typevoise
+
+3. 配置 Claude API（可选，用于 AI 润色）
+   - 点击菜单栏图标 → 设置
+   - 填入 Claude API Key 和 Base URL
+   - 如果不配置，将直接输出识别的原始文本
+
+4. 使用快捷键 ⌘⇧Space 开始语音输入
 
 ## 使用说明
 
@@ -170,17 +191,40 @@ Typevoise/
 
 ## 故障排除
 
+### 无法打开应用（提示"已损坏"或"无法验证开发者"）
+
+这是 macOS 的安全机制。解决方法：
+1. 右键点击 Typevoise.app
+2. 选择"打开"
+3. 在弹出的对话框中点击"打开"
+
+或者在终端中运行：
+```bash
+xattr -cr /Applications/Typevoise.app
+```
+
 ### App 不出现在辅助功能列表中
 
-确保你安装的是 Release 版本到 `/Applications` 目录,而不是直接从 Xcode 运行。使用 `./deploy.sh` 脚本可以解决这个问题。
+确保你安装的是 Release 版本到 `/Applications` 目录。如果从源码构建，使用 `./deploy.sh` 或 `./install.sh` 脚本。
 
 ### 快捷键不工作
 
-检查是否已授予辅助功能权限。
+检查是否已授予辅助功能权限：
+- 系统设置 → 隐私与安全性 → 辅助功能
+- 确保 Typevoise 在列表中且已勾选
 
 ### 语音识别不准确
 
-确保在安静的环境中使用,并清晰地说话。
+1. 确保在安静的环境中使用
+2. 清晰地说话，不要太快
+3. 可以尝试切换到 Whisper 引擎（在设置中）
+
+### Claude API 调用失败
+
+1. 检查 API Key 是否正确
+2. 检查 Base URL 是否正确（默认：https://api.anthropic.com）
+3. 检查网络连接
+4. 如果使用代理，确保代理配置正确
 
 ## 开发
 
@@ -197,6 +241,16 @@ open Typevoise.xcodeproj
 ```bash
 rm -rf build/
 ```
+
+## 更新日志
+
+查看 [Releases 页面](https://github.com/diaojz/Typevoise/releases) 了解最新版本和更新内容。
+
+## 反馈与贡献
+
+- 问题反馈：[GitHub Issues](https://github.com/diaojz/Typevoise/issues)
+- 功能建议：[GitHub Discussions](https://github.com/diaojz/Typevoise/discussions)
+- 贡献代码：欢迎提交 Pull Request
 
 ## 许可证
 

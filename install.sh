@@ -40,13 +40,16 @@ echo "║          语音转文字 + AI 润色 + 自动粘贴                   
 echo "║                                                            ║"
 echo "╚════════════════════════════════════════════════════════════╝"
 echo ""
-print_info "本脚本将自动完成以下操作："
+print_info "💡 提示：如果你不想从源码构建，可以直接下载预编译版本："
+echo "   https://github.com/diaojz/Typevoise/releases"
+echo ""
+print_info "本脚本将从源码构建并安装，包括以下步骤："
 echo "  1. 检查系统环境"
 echo "  2. 下载必要的组件"
 echo "  3. 构建并安装应用"
 echo "  4. 配置权限"
 echo ""
-read -p "按回车键开始安装..."
+read -p "按回车键继续从源码安装，或按 Ctrl+C 取消..."
 
 # 步骤 1: 检查系统
 echo ""
