@@ -4,7 +4,7 @@
 
 ## 功能特性
 
-- 🎤 系统级语音识别
+- 🎤 系统级语音识别 + Whisper 本地识别（可选）
 - ✨ AI 智能润色（使用 Claude API）
 - ⌨️ 全局快捷键触发（可自定义）
 - 📋 自动粘贴识别结果到当前应用
@@ -22,6 +22,17 @@
 
 - Xcode 15.0+
 - Swift 5.9+
+
+## 克隆项目
+
+```bash
+# 克隆主仓库
+git clone https://github.com/diaojz/Typevoise.git
+cd Typevoise
+
+# 初始化子模块（包含 whisper-service）
+git submodule update --init --recursive
+```
 
 ## 构建和安装
 
