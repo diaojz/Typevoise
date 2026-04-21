@@ -255,13 +255,16 @@ class WhisperServiceManager: ObservableObject {
     // MARK: - 私有方法
 
     private func getServicePath() -> String? {
-        // 开发环境：使用项目外的 whisper-service 目录
-        let devPath = "/Users/diaoye/Documents/BD/App Store/app/whisper-service"
-        if FileManager.default.fileExists(atPath: devPath) {
-            return devPath
+        // 1. 优先查找项目内的 whisper-service（子模块）
+        if let bundlePath = Bundle.main.bundlePath as NSString? {
+            let projectRoot = (bundlePath.deletingLastPathComponent as NSString).deletingLastPathComponent as NSString
+            let servicePath = projectRoot.appendingPathComponent("whisper-service")
+            if FileManager.default.fileExists(atPath: servicePath) {
+                return servicePath
+            }
         }
 
-        // 生产环境：使用 App Bundle 内的服务
+        // 2. 查找 App Bundle 内的服务（生产环境）
         if let bundlePath = Bundle.main.resourcePath {
             let servicePath = bundlePath + "/whisper-service"
             if FileManager.default.fileExists(atPath: servicePath) {
