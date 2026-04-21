@@ -2,6 +2,47 @@
 
 一个 macOS 菜单栏应用,通过快捷键快速进行语音转文字。
 
+## 应用预览
+
+<div align="center">
+  <img src="images/main-interface.png" alt="Typevoise 主界面" width="800">
+  <p><em>自然说话，流畅写字，在任何输入框中</em></p>
+</div>
+
+### 核心功能展示
+
+<table>
+  <tr>
+    <td width="50%">
+      <img src="images/recording-overlay.png" alt="语音识别中">
+      <p align="center"><strong>实时语音识别</strong><br>按下快捷键开始录音，实时显示识别状态</p>
+    </td>
+    <td width="50%">
+      <img src="images/processing-overlay.png" alt="AI 润色处理">
+      <p align="center"><strong>AI 智能润色</strong><br>自动优化口语表达，让文字更专业</p>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%">
+      <img src="images/history-view.png" alt="历史记录">
+      <p align="center"><strong>历史记录管理</strong><br>查看、搜索、复制所有转写记录</p>
+    </td>
+    <td width="50%">
+      <img src="images/settings-api.png" alt="设置中心">
+      <p align="center"><strong>灵活的设置选项</strong><br>配置 API、快捷键、识别引擎等</p>
+    </td>
+  </tr>
+</table>
+
+**核心功能一览：**
+- 🎤 按下快捷键（⌘⇧Space）即可开始语音输入
+- ✨ AI 智能润色，让口语表达更专业
+- 📋 自动粘贴到当前光标位置
+- 📝 完整的历史记录管理
+- ⚙️ 灵活的设置选项（快捷键、API 配置等）
+
+> 💡 **立即体验**：访问 [Releases 页面](https://github.com/diaojz/Typevoise/releases) 下载最新版本
+
 ## 功能特性
 
 - 🎤 系统级语音识别 + Whisper 本地识别（可选）
