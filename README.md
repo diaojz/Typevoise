@@ -11,6 +11,30 @@
 - 📝 历史记录管理（查看、搜索、复制所有转写记录）
 - 🔒 隐私安全，所有处理在本地完成
 
+## 快速安装（推荐）
+
+**适合完全不懂代码的用户：**
+
+1. 下载项目：
+   - 访问 https://github.com/diaojz/Typevoise
+   - 点击绿色的 "Code" 按钮
+   - 选择 "Download ZIP"
+   - 解压下载的文件
+
+2. 打开终端（Terminal）：
+   - 按 ⌘+空格，输入 "终端" 或 "Terminal"
+   - 回车打开
+
+3. 在终端中输入以下命令（复制粘贴即可）：
+   ```bash
+   cd ~/Downloads/Typevoise-main
+   ./install.sh
+   ```
+
+4. 按照屏幕提示完成安装
+
+就这么简单！🎉
+
 ## 系统要求
 
 - macOS 13.0 或更高版本
@@ -23,7 +47,9 @@
 - Xcode 15.0+
 - Swift 5.9+
 
-## 克隆项目
+## 开发者安装
+
+如果你是开发者，想要从源码构建：
 
 ```bash
 # 克隆主仓库
@@ -32,11 +58,12 @@ cd Typevoise
 
 # 初始化子模块（包含 whisper-service）
 git submodule update --init --recursive
+
+# 一键构建安装
+./install.sh
 ```
 
-## 构建和安装
-
-### 方式 1: 使用脚本(推荐)
+或者手动构建：
 
 ```bash
 ./deploy.sh
