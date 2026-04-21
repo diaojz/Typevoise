@@ -22,7 +22,7 @@ class TextInserter {
 
         guard autoPasteEnabled else {
             print("⚠️ [TextInserter] 自动粘贴已关闭")
-            showNotification(title: "文本已复制到剪贴板", body: "请按 ⌘V 粘贴")
+            RecordingOverlayController.shared.hide()
             return
         }
 
@@ -30,50 +30,31 @@ class TextInserter {
         print("🔍 [TextInserter] AXIsProcessTrusted = \(isTrusted)")
 
         guard isTrusted else {
-            print("⚠️ [TextInserter] 辅助功能权限未授权，降级为手动粘贴")
-            showNotification(title: "已复制，未自动粘贴", body: "请在系统设置授予辅助功能权限后重试")
+            print("⚠️ [TextInserter] 辅助功能权限未授权")
+            RecordingOverlayController.shared.hide()
             return
         }
 
-        let currentBundleID = NSWorkspace.shared.frontmostApplication?.bundleIdentifier
-        print("🔍 [TextInserter] targetBundleID = \(targetBundleID ?? "nil"), currentBundleID = \(currentBundleID ?? "nil")")
-
-        if let targetBundleID,
-           currentBundleID != targetBundleID {
-            print("⚠️ [TextInserter] 前台应用已变化，降级为手动粘贴")
-            showNotification(title: "文本已复制到剪贴板", body: "检测到你切换了应用，请手动按 ⌘V")
-            return
-        }
-
-        if let targetPID,
-           let targetApp = NSRunningApplication(processIdentifier: targetPID) {
-            print("🔍 [TextInserter] 激活目标应用: \(targetApp.localizedName ?? "unknown")")
-            _ = targetApp.activate(options: [])
-        }
-
+        // 直接执行自动粘贴
         print("🔍 [TextInserter] 准备执行自动粘贴...")
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) {
-            if self.simulateCommandV() {
-                print("✅ [TextInserter] 已自动粘贴到当前输入框")
-            } else {
-                print("⚠️ [TextInserter] 自动粘贴失败，降级为手动粘贴")
-                self.showNotification(title: "文本已复制到剪贴板", body: "自动粘贴失败，请手动按 ⌘V")
-            }
+            self.simulateCommandV()
+            print("✅ [TextInserter] 已执行自动粘贴")
+            RecordingOverlayController.shared.hide()
         }
     }
 
-    private func simulateCommandV() -> Bool {
+    private func simulateCommandV() {
         guard let source = CGEventSource(stateID: .hidSystemState),
               let keyDown = CGEvent(keyboardEventSource: source, virtualKey: CGKeyCode(kVK_ANSI_V), keyDown: true),
               let keyUp = CGEvent(keyboardEventSource: source, virtualKey: CGKeyCode(kVK_ANSI_V), keyDown: false) else {
-            return false
+            return
         }
 
         keyDown.flags = .maskCommand
         keyUp.flags = .maskCommand
         keyDown.post(tap: .cghidEventTap)
         keyUp.post(tap: .cghidEventTap)
-        return true
     }
 
     private func requestNotificationPermission() {
