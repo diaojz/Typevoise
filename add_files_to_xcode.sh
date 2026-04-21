@@ -2,7 +2,8 @@
 
 # 将新文件添加到 Xcode 项目的脚本
 
-PROJECT_DIR="/Users/diaoye/Documents/BD/App Store/app/Typevoise"
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+PROJECT_DIR="$SCRIPT_DIR"
 cd "$PROJECT_DIR"
 
 echo "📦 将新文件添加到 Xcode 项目..."

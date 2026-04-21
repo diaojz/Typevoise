@@ -1,7 +1,8 @@
 #!/bin/bash
 
 # 图标生成脚本
-ICON_DIR="/Users/diaoye/Documents/BD/App Store/app/Typevoise/Typevoise/Assets.xcassets/AppIcon.appiconset"
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+ICON_DIR="$SCRIPT_DIR/Typevoise/Assets.xcassets/AppIcon.appiconset"
 
 # 使用 sips 和 SF Symbols 创建图标
 # 这里我们使用渐变色背景 + 波形图标
