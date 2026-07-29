@@ -7,3 +7,7 @@ build/
 secrets.json
 config.local.json
 **/UserDefaults.plist
+
+# Xcode 用户界面状态（每次开 Xcode 都变的二进制，不该跟踪）
+xcuserdata/
+*.xcuserstate
