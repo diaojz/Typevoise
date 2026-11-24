@@ -11,3 +11,11 @@ config.local.json
 # Xcode 用户界面状态（每次开 Xcode 都变的二进制，不该跟踪）
 xcuserdata/
 *.xcuserstate
+
+# 个人信息（不入库）：真实账号/邮箱等放 .private/，文档里只写占位
+.private/
+*.local.md
+.env
+.env.*
+!.env.example
+*.pem
